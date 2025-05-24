@@ -12,8 +12,60 @@
             color: white;
             height: 100vh;
             display: flex;
-            flex-direction: column;
         }
+        
+        /* Sidebar Styles */
+        .sidebar {
+            width: 260px;
+            background-color: #202123;
+            height: 100vh;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-sizing: border-box;
+        }
+        
+        .sidebar-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .sidebar-button {
+            padding: 12px 16px;
+            border-radius: 6px;
+            color: #ECECF1;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: none;
+            background: none;
+            width: 100%;
+            font-size: 14px;
+        }
+
+        .sidebar-button:hover {
+            background-color: #2A2B32;
+        }
+
+        .sidebar-button i {
+            font-size: 16px;
+            width: 16px;
+            text-align: center;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
         .chat-container {
             flex-grow: 1;
             padding: 20px;
@@ -22,6 +74,7 @@
             flex-direction: column;
             gap: 20px;
         }
+
         .input-container {
             padding: 20px;
             background-color: #343541;
@@ -29,11 +82,13 @@
             position: sticky;
             bottom: 0;
         }
+
         .input-box {
             max-width: 800px;
             margin: 0 auto;
             position: relative;
         }
+
         .chat-input {
             width: 100%;
             padding: 16px;
@@ -50,6 +105,7 @@
             max-height: 200px;
             overflow-y: auto;
         }
+
         .send-button {
             position: absolute;
             right: 15px;
@@ -59,47 +115,101 @@
             cursor: pointer;
             padding: 0;
         }
+
         .send-icon {
             width: 24px;
             height: 24px;
             fill: #565869;
             transition: fill 0.3s;
         }
+
         .send-button:hover .send-icon {
             fill: #fff;
         }
+
         .welcome-message {
             text-align: center;
             margin-top: 100px;
             color: #c5c5d2;
         }
+
         .welcome-message h1 {
             font-size: 2em;
             margin-bottom: 20px;
         }
+
         .welcome-message p {
             font-size: 1.1em;
             color: #8e8ea0;
         }
+
+        /* Divider Line */
+        .divider {
+            height: 1px;
+            background-color: #4d4d4f;
+            margin: 10px 0;
+        }
     </style>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div class="chat-container">
-        <div class="welcome-message">
-            <h1>Welcome to the Dashboard</h1>
-            <p>Start a conversation by typing a message below</p>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <!-- Upper Group -->
+        <div class="sidebar-group">
+            <button class="sidebar-button">
+                <i class="fas fa-file-invoice-dollar"></i>
+                Bill History
+            </button>
+            <button class="sidebar-button">
+                <i class="fas fa-boxes"></i>
+                Update Inventory
+            </button>
+            <button class="sidebar-button">
+                <i class="fas fa-chart-line"></i>
+                Data Analytics
+            </button>
         </div>
-    </div>
-    <div class="input-container">
-        <div class="input-box">
-            <textarea class="chat-input" placeholder="Type your message here..." rows="1"></textarea>
-            <button class="send-button">
-                <svg class="send-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                </svg>
+        
+        <!-- Lower Group -->
+        <div class="sidebar-group">
+            <div class="divider"></div>
+            <button class="sidebar-button">
+                <i class="fas fa-headset"></i>
+                Support
+            </button>
+            <button class="sidebar-button">
+                <i class="fas fa-cog"></i>
+                Settings
+            </button>
+            <button class="sidebar-button">
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
             </button>
         </div>
     </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="chat-container">
+            <div class="welcome-message">
+                <h1>Welcome to the Dashboard</h1>
+                <p>Select an option from the sidebar to get started</p>
+            </div>
+        </div>
+        <div class="input-container">
+            <div class="input-box">
+                <textarea class="chat-input" placeholder="Type your message here..." rows="1"></textarea>
+                <button class="send-button">
+                    <svg class="send-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const textarea = document.querySelector('.chat-input');
         
@@ -119,6 +229,15 @@
                 this.value = '';
                 this.style.height = 'auto';
             }
+        });
+
+        // Add click handlers for sidebar buttons
+        document.querySelectorAll('.sidebar-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const action = this.textContent.trim();
+                console.log('Clicked:', action);
+                // Here you would typically handle the navigation or action
+            });
         });
     </script>
 </body>
