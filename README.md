@@ -9,8 +9,8 @@ A modern chat application built with Flask, featuring:
 
 1. Clone the repository:
 ```bash
-git clone <your-repository-url>
-cd <repository-name>
+git clone https://github.com/Mohitpandey234/project.git
+cd project
 ```
 
 2. Create a virtual environment and activate it:
@@ -57,4 +57,4 @@ http://127.0.0.1:5000
 ```
 
 ## License
-MIT License 
+MIT License
