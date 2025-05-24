@@ -170,14 +170,11 @@ def generate():
     if 'email' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    user_input = request.json.get('message', '')
+    user_input = request.json.get('message', '').lower().strip()
     current_bill = session.get('current_bill', {
         'items': [],
         'total': 0
     })
-    
-    # Try to parse item addition
-    user_input = user_input.lower().strip()
     
     # Check for print/done command first
     if user_input in ['print', 'done']:
@@ -249,12 +246,33 @@ def generate():
             quantity = int(quantity)
             item_name = item_name.strip()
         else:
-            # If no match found, pass to LLM for processing
-            response = generate_response(user_input)
-            return jsonify({
-                'response': response,
-                'bill': current_bill
-            })
+            # Check if it's just a number
+            if user_input.isdigit():
+                return jsonify({
+                    'response': "Please specify both the item name and quantity. For example: '2 apple' or 'apple 2'",
+                    'bill': current_bill
+                })
+            
+            # Check if it's just a word (potential item name)
+            if re.match(r'^[a-zA-Z\s]+$', user_input):
+                return jsonify({
+                    'response': "Please specify the quantity along with the item name. For example: '2 " + user_input + "'",
+                    'bill': current_bill
+                })
+            
+            # If no match found, look for similar items
+            similar_items = db.find_similar_items(user_input)
+            if similar_items:
+                suggestions = ", ".join(similar_items)
+                return jsonify({
+                    'response': f"Item not found. Did you mean any of these: {suggestions}? Please try adding the item again with the correct name and quantity.",
+                    'bill': current_bill
+                })
+            else:
+                return jsonify({
+                    'response': "Please use the format: '[quantity] [item name]' or '[item name] [quantity]'",
+                    'bill': current_bill
+                })
     else:
         quantity, item_name = item_match.groups()
         quantity = int(quantity)
@@ -283,10 +301,19 @@ def generate():
                 'bill': current_bill
             })
         else:
-            return jsonify({
-                'response': f"Sorry, I couldn't find '{item_name}' in the inventory.",
-                'bill': current_bill
-            })
+            # Look for similar items
+            similar_items = db.find_similar_items(item_name)
+            if similar_items:
+                suggestions = ", ".join(similar_items)
+                return jsonify({
+                    'response': f"Item '{item_name}' not found. Did you mean any of these: {suggestions}? Please try adding the item again with the correct name.",
+                    'bill': current_bill
+                })
+            else:
+                return jsonify({
+                    'response': f"Sorry, I couldn't find '{item_name}' in the inventory.",
+                    'bill': current_bill
+                })
 
 @app.route('/inventory')
 def inventory():

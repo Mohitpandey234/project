@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from datetime import datetime
 import hashlib
 import json
+from difflib import get_close_matches
 
 DATABASE_NAME = 'inventory.db'
 
@@ -101,6 +102,14 @@ def get_bill_by_hash(bill_hash):
         ''', (bill_hash,))
         result = cursor.fetchone()
         return json.loads(result[0]) if result else None
+
+def find_similar_items(item_name):
+    """Find items with similar names in the inventory"""
+    with get_db() as db:
+        cursor = db.execute('SELECT item_name FROM inventory')
+        all_items = [row[0].lower() for row in cursor.fetchall()]
+        matches = get_close_matches(item_name.lower(), all_items, n=3, cutoff=0.6)
+        return matches
 
 # Initialize the database when the module is imported
 init_db() 
