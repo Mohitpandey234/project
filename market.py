@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import random
 import string
+from llm_service import llm_service
 
 # Create the app instance
 app = Flask(__name__)
@@ -55,6 +56,21 @@ def dashboard():
     if 'email' in session and 'otp' not in session:
         return render_template('dashboard.html')
     return redirect(url_for('auth'))
+
+@app.route('/generate', methods=['POST'])
+def generate():
+    if 'email' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    prompt = request.json.get('prompt')
+    if not prompt:
+        return jsonify({'error': 'No prompt provided'}), 400
+    
+    try:
+        response = llm_service.generate_response(prompt)
+        return jsonify({'response': response})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

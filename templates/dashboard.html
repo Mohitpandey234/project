@@ -149,6 +149,51 @@
             background-color: #4d4d4f;
             margin: 10px 0;
         }
+
+        /* Add styles for chat messages */
+        .message {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .user-message {
+            background-color: #2A2B32;
+            margin-left: auto;
+            color: #ECECF1;
+        }
+
+        .ai-message {
+            background-color: #444654;
+            margin-right: auto;
+            color: #ECECF1;
+        }
+
+        .message-container {
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .loading {
+            display: inline-block;
+            margin-left: 5px;
+        }
+
+        .loading span {
+            display: inline-block;
+            animation: dots 1.4s infinite ease-in-out both;
+            margin-right: 2px;
+        }
+
+        .loading span:nth-child(2) { animation-delay: 0.2s; }
+        .loading span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dots {
+            0%, 80%, 100% { opacity: 0; }
+            40% { opacity: 1; }
+        }
     </style>
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -195,8 +240,9 @@
         <div class="chat-container">
             <div class="welcome-message">
                 <h1>Welcome to the Dashboard</h1>
-                <p>Select an option from the sidebar to get started</p>
+                <p>Ask me anything or select an option from the sidebar</p>
             </div>
+            <div id="messages" class="message-container"></div>
         </div>
         <div class="input-container">
             <div class="input-box">
@@ -212,6 +258,8 @@
 
     <script>
         const textarea = document.querySelector('.chat-input');
+        const sendButton = document.querySelector('.send-button');
+        const messagesContainer = document.getElementById('messages');
         
         // Auto-resize textarea as user types
         textarea.addEventListener('input', function() {
@@ -220,16 +268,67 @@
             this.style.height = newHeight + 'px';
         });
 
-        // Handle Enter key (Shift+Enter for new line)
+        function addMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+            messageDiv.textContent = text;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addLoadingIndicator() {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message ai-message';
+            loadingDiv.innerHTML = 'Thinking<span class="loading"><span>.</span><span>.</span><span>.</span></span>';
+            messagesContainer.appendChild(loadingDiv);
+            return loadingDiv;
+        }
+
+        async function sendMessage(message) {
+            addMessage(message, true);
+            const loadingIndicator = addLoadingIndicator();
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ prompt: message })
+                });
+
+                const data = await response.json();
+                loadingIndicator.remove();
+
+                if (response.ok) {
+                    addMessage(data.response);
+                } else {
+                    addMessage('Sorry, I encountered an error processing your request.');
+                }
+            } catch (error) {
+                loadingIndicator.remove();
+                addMessage('Sorry, I encountered an error processing your request.');
+            }
+        }
+
+        // Handle Enter key and Send button
+        function handleSend() {
+            const message = textarea.value.trim();
+            if (message) {
+                sendMessage(message);
+                textarea.value = '';
+                textarea.style.height = 'auto';
+            }
+        }
+
         textarea.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                // Here you would typically send the message
-                console.log('Message:', this.value.trim());
-                this.value = '';
-                this.style.height = 'auto';
+                handleSend();
             }
         });
+
+        sendButton.addEventListener('click', handleSend);
 
         // Add click handlers for sidebar buttons
         document.querySelectorAll('.sidebar-button').forEach(button => {
