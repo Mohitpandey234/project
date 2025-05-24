@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #343541;
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-container {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .input-container {
+            padding: 20px;
+            background-color: #343541;
+            border-top: 1px solid #565869;
+            position: sticky;
+            bottom: 0;
+        }
+        .input-box {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .chat-input {
+            width: 100%;
+            padding: 16px;
+            padding-right: 50px;
+            border: 1px solid #565869;
+            border-radius: 12px;
+            background-color: #40414f;
+            color: white;
+            font-size: 16px;
+            line-height: 1.5;
+            resize: none;
+            box-sizing: border-box;
+            outline: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .send-button {
+            position: absolute;
+            right: 15px;
+            bottom: 15px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+        }
+        .send-icon {
+            width: 24px;
+            height: 24px;
+            fill: #565869;
+            transition: fill 0.3s;
+        }
+        .send-button:hover .send-icon {
+            fill: #fff;
+        }
+        .welcome-message {
+            text-align: center;
+            margin-top: 100px;
+            color: #c5c5d2;
+        }
+        .welcome-message h1 {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+        .welcome-message p {
+            font-size: 1.1em;
+            color: #8e8ea0;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="welcome-message">
+            <h1>Welcome to the Dashboard</h1>
+            <p>Start a conversation by typing a message below</p>
+        </div>
+    </div>
+    <div class="input-container">
+        <div class="input-box">
+            <textarea class="chat-input" placeholder="Type your message here..." rows="1"></textarea>
+            <button class="send-button">
+                <svg class="send-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    <script>
+        const textarea = document.querySelector('.chat-input');
+        
+        // Auto-resize textarea as user types
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            const newHeight = Math.min(this.scrollHeight, 200);
+            this.style.height = newHeight + 'px';
+        });
+
+        // Handle Enter key (Shift+Enter for new line)
+        textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                // Here you would typically send the message
+                console.log('Message:', this.value.trim());
+                this.value = '';
+                this.style.height = 'auto';
+            }
+        });
+    </script>
+</body>
+</html> 
