@@ -88,6 +88,10 @@
                     </table>
                     <div class="flex justify-between items-center mt-4">
                         <span class="text-xl font-bold">Total: $<span id="bill-total">0.00</span></span>
+                        <button onclick="sendMessage('print')" 
+                                class="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600 focus:outline-none">
+                            Done
+                        </button>
                     </div>
                 </div>
             </div>
@@ -128,12 +132,14 @@
             billTotal.textContent = bill.total.toFixed(2);
         }
 
-        async function sendMessage() {
-            const message = userInput.value.trim();
+        async function sendMessage(predefinedMessage = null) {
+            const message = predefinedMessage || userInput.value.trim();
             if (!message) return;
 
             addMessage(message, true);
-            userInput.value = '';
+            if (!predefinedMessage) {
+                userInput.value = '';
+            }
 
             try {
                 const response = await fetch('/generate', {
