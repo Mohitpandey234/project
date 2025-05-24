@@ -1,9 +1,9 @@
-# Flask Chat Application
+# Flask Authentication System
 
-A modern chat application built with Flask, featuring:
+A modern web application built with Flask, featuring:
 - User authentication with OTP verification
-- ChatGPT-like interface
-- Modern, responsive design
+- Modern ChatGPT-style interface
+- Clean, responsive design
 
 ## Setup Instructions
 
@@ -38,12 +38,12 @@ http://127.0.0.1:5000
 ```
 
 ## Features
-- Clean, modern UI inspired by ChatGPT
+- Clean, modern UI with ChatGPT-inspired design
 - Email and password authentication
-- OTP verification system
-- Responsive chat interface
-- Auto-resizing message input
-- Enter to send, Shift+Enter for new line
+- Secure OTP verification system
+- Responsive dashboard interface
+- Auto-resizing text input
+- Modern user experience
 
 ## Project Structure
 ```
@@ -53,7 +53,7 @@ http://127.0.0.1:5000
     ├── home.html      # Landing page
     ├── auth.html      # Login/Register page
     ├── verify.html    # OTP verification page
-    └── dashboard.html  # Chat interface
+    └── dashboard.html  # Main interface
 ```
 
 ## License
