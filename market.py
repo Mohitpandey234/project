@@ -1,9 +1,16 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file
 import random
 import string
-from llm_service import llm_service
+from llm_service import llm_service, generate_response
 import database as db
 import re
+from datetime import datetime
+import io
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
 
 # Create the app instance
 app = Flask(__name__)
@@ -59,20 +66,205 @@ def dashboard():
         return render_template('dashboard.html')
     return redirect(url_for('auth'))
 
+@app.route('/bill_history')
+def bill_history():
+    bills = db.get_bill_history()
+    formatted_bills = [{
+        'bill_hash': bill[0],
+        'date': bill[1],
+        'time': bill[2],
+        'total': bill[3]
+    } for bill in bills]
+    return render_template('bill_history.html', bills=formatted_bills)
+
+def create_bill_pdf(bill_data):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    elements = []
+    
+    # Add styles
+    styles = getSampleStyleSheet()
+    title_style = styles['Heading1']
+    
+    # Add title
+    elements.append(Paragraph(f"Bill #{bill_data['bill_hash']}", title_style))
+    elements.append(Paragraph(f"Date: {bill_data['date']} {bill_data['time']}", styles['Normal']))
+    elements.append(Paragraph("<br/><br/>", styles['Normal']))
+    
+    # Create items table
+    table_data = [['Item', 'Quantity', 'Price', 'Total']]
+    for item in bill_data['items']:
+        table_data.append([
+            item['name'],
+            str(item['quantity']),
+            f"${item['price']:.2f}",
+            f"${item['total']:.2f}"
+        ])
+    
+    # Add summary row
+    table_data.append(['', '', 'Total:', f"${bill_data['total']:.2f}"])
+    
+    # Create table
+    table = Table(table_data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.beige),
+        ('TEXTCOLOR', (0, -1), (-1, -1), colors.black),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, -1), (-1, -1), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    elements.append(table)
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+@app.route('/download_bill/<bill_hash>')
+def download_bill(bill_hash):
+    bill_data = db.get_bill_by_hash(bill_hash)
+    if not bill_data:
+        return "Bill not found", 404
+    
+    pdf_buffer = create_bill_pdf(bill_data)
+    return send_file(
+        pdf_buffer,
+        download_name=f'bill_{bill_hash}.pdf',
+        as_attachment=True,
+        mimetype='application/pdf'
+    )
+
+def parse_bill_command(command):
+    """Parse chat commands related to bill management"""
+    command = command.lower().strip()
+    
+    # Handle discount command
+    discount_match = re.match(r'put (\d+)% discount on item (\d+)', command)
+    if discount_match:
+        discount, item_num = map(int, discount_match.groups())
+        return {'action': 'discount', 'item': item_num - 1, 'discount': discount}
+    
+    # Handle quantity change command
+    quantity_match = re.match(r'change quantity of item (\d+) from (\d+) to (\d+)', command)
+    if quantity_match:
+        item_num, old_qty, new_qty = map(int, quantity_match.groups())
+        return {'action': 'quantity', 'item': item_num - 1, 'quantity': new_qty}
+    
+    # Handle print command
+    if command == 'print':
+        return {'action': 'print'}
+    
+    return None
+
 @app.route('/generate', methods=['POST'])
 def generate():
     if 'email' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    prompt = request.json.get('prompt')
-    if not prompt:
-        return jsonify({'error': 'No prompt provided'}), 400
+    user_input = request.json.get('message', '')
+    current_bill = session.get('current_bill', {
+        'items': [],
+        'total': 0
+    })
     
-    try:
-        response = llm_service.generate_response(prompt)
-        return jsonify({'response': response})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    # Check if it's a bill command
+    command_result = parse_bill_command(user_input)
+    if command_result:
+        if command_result['action'] == 'discount':
+            item_idx = command_result['item']
+            if 0 <= item_idx < len(current_bill['items']):
+                item = current_bill['items'][item_idx]
+                discount = command_result['discount'] / 100
+                item['total'] *= (1 - discount)
+                current_bill['total'] = sum(item['total'] for item in current_bill['items'])
+                return jsonify({
+                    'response': f"Applied {command_result['discount']}% discount to item {item_idx + 1}",
+                    'bill': current_bill
+                })
+        
+        elif command_result['action'] == 'quantity':
+            item_idx = command_result['item']
+            if 0 <= item_idx < len(current_bill['items']):
+                item = current_bill['items'][item_idx]
+                item['quantity'] = command_result['quantity']
+                item['total'] = item['price'] * item['quantity']
+                current_bill['total'] = sum(item['total'] for item in current_bill['items'])
+                return jsonify({
+                    'response': f"Updated quantity for item {item_idx + 1}",
+                    'bill': current_bill
+                })
+        
+        elif command_result['action'] == 'print':
+            if not current_bill['items']:
+                return jsonify({
+                    'response': "Cannot print empty bill. Please add items first.",
+                    'bill': current_bill
+                })
+            
+            # Add timestamp and hash to bill
+            now = datetime.now()
+            current_bill.update({
+                'date': now.strftime('%Y-%m-%d'),
+                'time': now.strftime('%H:%M:%S'),
+            })
+            
+            # Save bill to database
+            bill_hash = db.save_bill(current_bill)
+            current_bill['bill_hash'] = bill_hash
+            
+            # Clear current bill from session
+            session['current_bill'] = {'items': [], 'total': 0}
+            
+            return jsonify({
+                'response': f"Bill saved with ID: {bill_hash}. You can download it from the bill history page.",
+                'bill': None
+            })
+    
+    # Try to parse item addition
+    item_match = re.match(r'(\d+)\s+(.+)', user_input)
+    if item_match:
+        quantity, item_name = item_match.groups()
+        quantity = int(quantity)
+        item_name = item_name.strip()
+        
+        # Search for item in inventory
+        with db.get_db() as db:
+            cursor = db.execute('SELECT item_name, price FROM inventory WHERE item_name LIKE ?', (f'%{item_name}%',))
+            items = cursor.fetchall()
+            
+            if items:
+                item = items[0]  # Take the first matching item
+                total = item[1] * quantity
+                current_bill['items'].append({
+                    'name': item[0],
+                    'quantity': quantity,
+                    'price': item[1],
+                    'total': total
+                })
+                current_bill['total'] = sum(item['total'] for item in current_bill['items'])
+                session['current_bill'] = current_bill
+                
+                return jsonify({
+                    'response': f"Added {quantity} x {item[0]} to the bill",
+                    'bill': current_bill
+                })
+            else:
+                return jsonify({
+                    'response': f"Item '{item_name}' not found in inventory",
+                    'bill': current_bill
+                })
+    
+    # If no special command matched, use LLM
+    response = generate_response(user_input)
+    return jsonify({
+        'response': response,
+        'bill': current_bill
+    })
 
 @app.route('/inventory')
 def inventory():

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bill History</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .bill-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .bill-table th, .bill-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .bill-table th {
+            background-color: #f8fafc;
+            font-weight: 600;
+        }
+        .bill-table tr:hover {
+            background-color: #f1f5f9;
+        }
+        .download-btn {
+            padding: 6px 12px;
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .download-btn:hover {
+            background-color: #2563eb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Bill History</h1>
+            <a href="/dashboard" class="text-blue-600 hover:text-blue-800">Back to Dashboard</a>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <table class="bill-table">
+                <thead>
+                    <tr>
+                        <th>Bill #</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Total Amount</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bill in bills %}
+                    <tr>
+                        <td>{{ bill.bill_hash }}</td>
+                        <td>{{ bill.date }}</td>
+                        <td>{{ bill.time }}</td>
+                        <td>${{ "%.2f"|format(bill.total) }}</td>
+                        <td>
+                            <button onclick="downloadBill('{{ bill.bill_hash }}')" class="download-btn">
+                                Download PDF
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function downloadBill(billHash) {
+            window.location.href = `/download_bill/${billHash}`;
+        }
+    </script>
+</body>
+</html> 

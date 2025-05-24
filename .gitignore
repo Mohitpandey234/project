@@ -31,9 +31,11 @@ ENV/
 *.swp
 *.swo
 
-# Flask
-instance/
-.webassets-cache
+# Database
+*.db
+
+# Logs
+*.log
 
 # Environment variables
 .env

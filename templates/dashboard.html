@@ -2,291 +2,138 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            background-color: #343541;
-            color: white;
-            height: 100vh;
-            display: flex;
-        }
-        
-        /* Sidebar Styles */
-        .sidebar {
-            width: 260px;
-            background-color: #202123;
-            height: 100vh;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            box-sizing: border-box;
-        }
-        
-        .sidebar-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .sidebar-button {
-            padding: 12px 16px;
-            border-radius: 6px;
-            color: #ECECF1;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            text-align: left;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border: none;
-            background: none;
-            width: 100%;
-            font-size: 14px;
-        }
-
-        .sidebar-button:hover {
-            background-color: #2A2B32;
-        }
-
-        .sidebar-button i {
-            font-size: 16px;
-            width: 16px;
-            text-align: center;
-        }
-
-        /* Main Content Styles */
-        .main-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-
         .chat-container {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+            height: calc(100vh - 16rem);
         }
-
-        .input-container {
-            padding: 20px;
-            background-color: #343541;
-            border-top: 1px solid #565869;
-            position: sticky;
-            bottom: 0;
-        }
-
-        .input-box {
-            max-width: 800px;
-            margin: 0 auto;
-            position: relative;
-        }
-
-        .chat-input {
-            width: 100%;
-            padding: 16px;
-            padding-right: 50px;
-            border: 1px solid #565869;
-            border-radius: 12px;
-            background-color: #40414f;
-            color: white;
-            font-size: 16px;
-            line-height: 1.5;
-            resize: none;
-            box-sizing: border-box;
-            outline: none;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .send-button {
-            position: absolute;
-            right: 15px;
-            bottom: 15px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0;
-        }
-
-        .send-icon {
-            width: 24px;
-            height: 24px;
-            fill: #565869;
-            transition: fill 0.3s;
-        }
-
-        .send-button:hover .send-icon {
-            fill: #fff;
-        }
-
-        .welcome-message {
-            text-align: center;
-            margin-top: 100px;
-            color: #c5c5d2;
-        }
-
-        .welcome-message h1 {
-            font-size: 2em;
-            margin-bottom: 20px;
-        }
-
-        .welcome-message p {
-            font-size: 1.1em;
-            color: #8e8ea0;
-        }
-
-        /* Divider Line */
-        .divider {
-            height: 1px;
-            background-color: #4d4d4f;
-            margin: 10px 0;
-        }
-
-        /* Add styles for chat messages */
         .message {
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 10px;
             max-width: 80%;
+            margin: 8px;
+            padding: 12px;
+            border-radius: 8px;
         }
-
         .user-message {
-            background-color: #2A2B32;
+            background-color: #e3f2fd;
             margin-left: auto;
-            color: #ECECF1;
         }
-
-        .ai-message {
-            background-color: #444654;
+        .assistant-message {
+            background-color: #f5f5f5;
             margin-right: auto;
-            color: #ECECF1;
         }
-
-        .message-container {
-            max-width: 800px;
-            margin: 0 auto;
+        .bill-table {
             width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
         }
-
-        .loading {
-            display: inline-block;
-            margin-left: 5px;
+        .bill-table th, .bill-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
         }
-
-        .loading span {
-            display: inline-block;
-            animation: dots 1.4s infinite ease-in-out both;
-            margin-right: 2px;
-        }
-
-        .loading span:nth-child(2) { animation-delay: 0.2s; }
-        .loading span:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes dots {
-            0%, 80%, 100% { opacity: 0; }
-            40% { opacity: 1; }
+        .bill-table th {
+            background-color: #f8fafc;
+            font-weight: 600;
         }
     </style>
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body>
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <!-- Upper Group -->
-        <div class="sidebar-group">
-            <button class="sidebar-button">
-                <i class="fas fa-file-invoice-dollar"></i>
-                Bill History
-            </button>
-            <button class="sidebar-button">
-                <i class="fas fa-boxes"></i>
-                Update Inventory
-            </button>
-            <button class="sidebar-button">
-                <i class="fas fa-chart-line"></i>
-                Data Analytics
-            </button>
-        </div>
-        
-        <!-- Lower Group -->
-        <div class="sidebar-group">
-            <div class="divider"></div>
-            <button class="sidebar-button">
-                <i class="fas fa-headset"></i>
-                Support
-            </button>
-            <button class="sidebar-button">
-                <i class="fas fa-cog"></i>
-                Settings
-            </button>
-            <button class="sidebar-button">
-                <i class="fas fa-sign-out-alt"></i>
-                Logout
-            </button>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="main-content">
-        <div class="chat-container">
-            <div class="welcome-message">
-                <h1>Welcome to the Dashboard</h1>
-                <p>Ask me anything or select an option from the sidebar</p>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+            <div class="space-x-4">
+                <a href="/inventory" class="text-blue-600 hover:text-blue-800">Inventory</a>
+                <a href="/bill_history" class="text-blue-600 hover:text-blue-800">Bill History</a>
+                <a href="/logout" class="text-red-600 hover:text-red-800">Logout</a>
             </div>
-            <div id="messages" class="message-container"></div>
         </div>
-        <div class="input-container">
-            <div class="input-box">
-                <textarea class="chat-input" placeholder="Type your message here..." rows="1"></textarea>
-                <button class="send-button">
-                    <svg class="send-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                    </svg>
-                </button>
+
+        <div class="grid grid-cols-2 gap-6">
+            <!-- Chat Interface -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div id="chat-messages" class="chat-container overflow-y-auto mb-4">
+                    <!-- Messages will be added here -->
+                </div>
+
+                <div class="flex">
+                    <input type="text" id="user-input" 
+                           class="flex-1 border rounded-l px-4 py-2 focus:outline-none focus:border-blue-500"
+                           placeholder="Type your message...">
+                    <button onclick="sendMessage()" 
+                            class="bg-blue-500 text-white px-6 py-2 rounded-r hover:bg-blue-600 focus:outline-none">
+                        Send
+                    </button>
+                </div>
+            </div>
+
+            <!-- Current Bill -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Current Bill</h2>
+                <div id="current-bill">
+                    <table class="bill-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Item</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bill-items">
+                            <!-- Bill items will be added here -->
+                        </tbody>
+                    </table>
+                    <div class="flex justify-between items-center mt-4">
+                        <span class="text-xl font-bold">Total: $<span id="bill-total">0.00</span></span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        const textarea = document.querySelector('.chat-input');
-        const sendButton = document.querySelector('.send-button');
-        const messagesContainer = document.getElementById('messages');
-        
-        // Auto-resize textarea as user types
-        textarea.addEventListener('input', function() {
-            this.style.height = 'auto';
-            const newHeight = Math.min(this.scrollHeight, 200);
-            this.style.height = newHeight + 'px';
-        });
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const billItems = document.getElementById('bill-items');
+        const billTotal = document.getElementById('bill-total');
 
-        function addMessage(text, isUser = false) {
+        function addMessage(content, isUser) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
-            messageDiv.textContent = text;
-            messagesContainer.appendChild(messageDiv);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+            messageDiv.textContent = content;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        function addLoadingIndicator() {
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'message ai-message';
-            loadingDiv.innerHTML = 'Thinking<span class="loading"><span>.</span><span>.</span><span>.</span></span>';
-            messagesContainer.appendChild(loadingDiv);
-            return loadingDiv;
+        function updateBill(bill) {
+            if (!bill) {
+                billItems.innerHTML = '';
+                billTotal.textContent = '0.00';
+                return;
+            }
+
+            billItems.innerHTML = bill.items.map((item, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${item.name}</td>
+                    <td>${item.quantity}</td>
+                    <td>$${item.price.toFixed(2)}</td>
+                    <td>$${item.total.toFixed(2)}</td>
+                </tr>
+            `).join('');
+            
+            billTotal.textContent = bill.total.toFixed(2);
         }
 
-        async function sendMessage(message) {
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
             addMessage(message, true);
-            const loadingIndicator = addLoadingIndicator();
+            userInput.value = '';
 
             try {
                 const response = await fetch('/generate', {
@@ -294,50 +141,25 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ prompt: message })
+                    body: JSON.stringify({ message: message })
                 });
 
                 const data = await response.json();
-                loadingIndicator.remove();
-
-                if (response.ok) {
-                    addMessage(data.response);
-                } else {
-                    addMessage('Sorry, I encountered an error processing your request.');
-                }
+                addMessage(data.response, false);
+                updateBill(data.bill);
             } catch (error) {
-                loadingIndicator.remove();
-                addMessage('Sorry, I encountered an error processing your request.');
+                addMessage('Error: Could not send message', false);
             }
         }
 
-        // Handle Enter key and Send button
-        function handleSend() {
-            const message = textarea.value.trim();
-            if (message) {
-                sendMessage(message);
-                textarea.value = '';
-                textarea.style.height = 'auto';
-            }
-        }
-
-        textarea.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
             }
         });
 
-        sendButton.addEventListener('click', handleSend);
-
-        // Add click handlers for sidebar buttons
-        document.querySelectorAll('.sidebar-button').forEach(button => {
-            button.addEventListener('click', function() {
-                const action = this.textContent.trim();
-                console.log('Clicked:', action);
-                // Here you would typically handle the navigation or action
-            });
-        });
+        // Initial welcome message
+        addMessage("Welcome! You can start creating a bill by typing items and quantities (e.g., '2 apple' or '3 banana'). You can also use commands like 'put 10% discount on item 2' or 'change quantity of item 1 from 2 to 3'. When you're done, type 'print' to save the bill.", false);
     </script>
 </body>
 </html> 
