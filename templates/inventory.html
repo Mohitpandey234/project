@@ -29,6 +29,33 @@
             overflow-x: auto;
         }
 
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .search-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .search-input {
+            padding: 8px 12px;
+            border: 1px solid #565869;
+            border-radius: 5px;
+            background-color: #40414f;
+            color: white;
+            font-size: 14px;
+            width: 200px;
+        }
+
+        .search-input::placeholder {
+            color: #8e8ea0;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -44,6 +71,33 @@
         th {
             background-color: #444654;
             color: #ECECF1;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+
+        th:hover {
+            background-color: #4a4c5c;
+        }
+
+        .sort-icon {
+            display: inline-block;
+            width: 0;
+            height: 0;
+            margin-left: 5px;
+            vertical-align: middle;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+        }
+
+        .sort-asc .sort-icon {
+            border-bottom: 4px solid #8e8ea0;
+            border-top: none;
+        }
+
+        .sort-desc .sort-icon {
+            border-top: 4px solid #8e8ea0;
+            border-bottom: none;
         }
 
         tr:hover {
@@ -119,17 +173,28 @@
             margin: 10px 0;
             font-size: 14px;
         }
+
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            color: #8e8ea0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="table-container">
-            <h2>Current Inventory</h2>
+            <div class="table-header">
+                <h2>Current Inventory</h2>
+                <div class="search-container">
+                    <input type="text" class="search-input" placeholder="Search items..." id="searchInput">
+                </div>
+            </div>
             <table>
                 <thead>
                     <tr>
-                        <th>Item Name</th>
-                        <th>Price</th>
+                        <th data-sort="name">Item Name <span class="sort-icon"></span></th>
+                        <th data-sort="price">Price <span class="sort-icon"></span></th>
                     </tr>
                 </thead>
                 <tbody id="inventory-table">
@@ -168,6 +233,12 @@
         const chatInput = document.querySelector('.chat-input');
         const sendButton = document.querySelector('.send-button');
         const inventoryTable = document.getElementById('inventory-table');
+        const searchInput = document.getElementById('searchInput');
+        let currentInventory = [];
+        let sortConfig = {
+            column: null,
+            direction: 'asc'
+        };
 
         function addMessage(text, isUser = false) {
             const messageDiv = document.createElement('div');
@@ -177,14 +248,86 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
+        function formatPrice(price) {
+            return `$${parseFloat(price).toFixed(2)}`;
+        }
+
         function updateTable(inventory) {
+            currentInventory = inventory;
+            renderTable(inventory);
+        }
+
+        function renderTable(inventory) {
+            if (inventory.length === 0) {
+                inventoryTable.innerHTML = `
+                    <tr>
+                        <td colspan="2" class="no-results">No items found</td>
+                    </tr>
+                `;
+                return;
+            }
+
             inventoryTable.innerHTML = inventory.map(item => `
                 <tr>
                     <td>${item[0]}</td>
-                    <td>$${item[1].toFixed(2)}</td>
+                    <td>${formatPrice(item[1])}</td>
                 </tr>
             `).join('');
         }
+
+        function sortInventory(column) {
+            const inventory = [...currentInventory];
+            const columnIndex = column === 'name' ? 0 : 1;
+
+            if (sortConfig.column === column) {
+                sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortConfig.column = column;
+                sortConfig.direction = 'asc';
+            }
+
+            inventory.sort((a, b) => {
+                let comparison = 0;
+                if (columnIndex === 1) {
+                    // Sort numbers
+                    comparison = parseFloat(a[columnIndex]) - parseFloat(b[columnIndex]);
+                } else {
+                    // Sort strings
+                    comparison = a[columnIndex].localeCompare(b[columnIndex]);
+                }
+                return sortConfig.direction === 'asc' ? comparison : -comparison;
+            });
+
+            // Update sort icons
+            document.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (th.dataset.sort === column) {
+                    th.classList.add(`sort-${sortConfig.direction}`);
+                }
+            });
+
+            renderTable(inventory);
+        }
+
+        function filterInventory(searchTerm) {
+            const filtered = currentInventory.filter(item => 
+                item[0].toLowerCase().includes(searchTerm.toLowerCase()) ||
+                formatPrice(item[1]).includes(searchTerm)
+            );
+            renderTable(filtered);
+        }
+
+        // Add event listeners for sorting
+        document.querySelectorAll('th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                sortInventory(th.dataset.sort);
+            });
+        });
+
+        // Add event listener for search
+        searchInput.addEventListener('input', (e) => {
+            filterInventory(e.target.value.trim());
+        });
 
         async function handleCommand(command) {
             try {
@@ -201,6 +344,14 @@
                 
                 if (data.inventory) {
                     updateTable(data.inventory);
+                    // Maintain current search filter
+                    if (searchInput.value.trim()) {
+                        filterInventory(searchInput.value.trim());
+                    }
+                    // Maintain current sort
+                    if (sortConfig.column) {
+                        sortInventory(sortConfig.column);
+                    }
                 }
             } catch (error) {
                 addMessage('Sorry, there was an error processing your command.');
@@ -224,6 +375,9 @@
         });
 
         sendButton.addEventListener('click', handleSend);
+
+        // Initialize the current inventory
+        updateTable({{ inventory | tojson | safe }});
     </script>
 </body>
 </html> 
