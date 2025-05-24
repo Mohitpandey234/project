@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()  # Load environment variables from .env file
+
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file
 import random
 import string
@@ -86,8 +89,9 @@ def create_bill_pdf(bill_data):
     styles = getSampleStyleSheet()
     title_style = styles['Heading1']
     
-    # Add title
-    elements.append(Paragraph(f"Bill #{bill_data['bill_hash']}", title_style))
+    # Add title and header info
+    bill_hash = bill_data.get('bill_hash', 'N/A')
+    elements.append(Paragraph(f"Bill #{bill_hash}", title_style))
     elements.append(Paragraph(f"Date: {bill_data['date']} {bill_data['time']}", styles['Normal']))
     elements.append(Paragraph("<br/><br/>", styles['Normal']))
     
@@ -155,8 +159,8 @@ def parse_bill_command(command):
         item_num, old_qty, new_qty = map(int, quantity_match.groups())
         return {'action': 'quantity', 'item': item_num - 1, 'quantity': new_qty}
     
-    # Handle print command
-    if command == 'print':
+    # Handle print/done command
+    if command in ['print', 'done']:
         return {'action': 'print'}
     
     return None
@@ -172,6 +176,37 @@ def generate():
         'total': 0
     })
     
+    # Try to parse item addition
+    user_input = user_input.lower().strip()
+    
+    # Check for print/done command first
+    if user_input in ['print', 'done']:
+        command_result = {'action': 'print'}
+        if not current_bill['items']:
+            return jsonify({
+                'response': "Cannot print empty bill. Please add items first.",
+                'bill': current_bill
+            })
+        
+        # Add timestamp and hash to bill
+        now = datetime.now()
+        current_bill.update({
+            'date': now.strftime('%Y-%m-%d'),
+            'time': now.strftime('%H:%M:%S'),
+        })
+        
+        # Save bill to database
+        bill_hash = db.save_bill(current_bill)
+        current_bill['bill_hash'] = bill_hash
+        
+        # Clear current bill from session
+        session['current_bill'] = {'items': [], 'total': 0}
+        
+        return jsonify({
+            'response': f"Bill saved with ID: {bill_hash}. You can download it from the bill history page.",
+            'bill': None
+        })
+
     # Check if it's a bill command
     command_result = parse_bill_command(user_input)
     if command_result:
@@ -182,6 +217,8 @@ def generate():
                 discount = command_result['discount'] / 100
                 item['total'] *= (1 - discount)
                 current_bill['total'] = sum(item['total'] for item in current_bill['items'])
+                # Update the session with the modified bill
+                session['current_bill'] = current_bill
                 return jsonify({
                     'response': f"Applied {command_result['discount']}% discount to item {item_idx + 1}",
                     'bill': current_bill
@@ -194,77 +231,62 @@ def generate():
                 item['quantity'] = command_result['quantity']
                 item['total'] = item['price'] * item['quantity']
                 current_bill['total'] = sum(item['total'] for item in current_bill['items'])
+                # Update the session with the modified bill
+                session['current_bill'] = current_bill
                 return jsonify({
                     'response': f"Updated quantity for item {item_idx + 1}",
                     'bill': current_bill
                 })
-        
-        elif command_result['action'] == 'print':
-            if not current_bill['items']:
-                return jsonify({
-                    'response': "Cannot print empty bill. Please add items first.",
-                    'bill': current_bill
-                })
-            
-            # Add timestamp and hash to bill
-            now = datetime.now()
-            current_bill.update({
-                'date': now.strftime('%Y-%m-%d'),
-                'time': now.strftime('%H:%M:%S'),
-            })
-            
-            # Save bill to database
-            bill_hash = db.save_bill(current_bill)
-            current_bill['bill_hash'] = bill_hash
-            
-            # Clear current bill from session
-            session['current_bill'] = {'items': [], 'total': 0}
-            
-            return jsonify({
-                'response': f"Bill saved with ID: {bill_hash}. You can download it from the bill history page.",
-                'bill': None
-            })
     
-    # Try to parse item addition
+    # First pattern: quantity followed by item name (e.g., "2 dosa")
     item_match = re.match(r'(\d+)\s+(.+)', user_input)
-    if item_match:
+    if not item_match:
+        # Second pattern: item name followed by quantity (e.g., "dosa 2")
+        item_match = re.match(r'([a-zA-Z\s]+)\s+(\d+)', user_input)
+        if item_match:
+            # Swap the groups since they're in reverse order
+            item_name, quantity = item_match.groups()
+            quantity = int(quantity)
+            item_name = item_name.strip()
+        else:
+            # If no match found, pass to LLM for processing
+            response = generate_response(user_input)
+            return jsonify({
+                'response': response,
+                'bill': current_bill
+            })
+    else:
         quantity, item_name = item_match.groups()
         quantity = int(quantity)
         item_name = item_name.strip()
-        
-        # Search for item in inventory
-        with db.get_db() as db:
-            cursor = db.execute('SELECT item_name, price FROM inventory WHERE item_name LIKE ?', (f'%{item_name}%',))
-            items = cursor.fetchall()
-            
-            if items:
-                item = items[0]  # Take the first matching item
-                total = item[1] * quantity
-                current_bill['items'].append({
-                    'name': item[0],
-                    'quantity': quantity,
-                    'price': item[1],
-                    'total': total
-                })
-                current_bill['total'] = sum(item['total'] for item in current_bill['items'])
-                session['current_bill'] = current_bill
-                
-                return jsonify({
-                    'response': f"Added {quantity} x {item[0]} to the bill",
-                    'bill': current_bill
-                })
-            else:
-                return jsonify({
-                    'response': f"Item '{item_name}' not found in inventory",
-                    'bill': current_bill
-                })
     
-    # If no special command matched, use LLM
-    response = generate_response(user_input)
-    return jsonify({
-        'response': response,
-        'bill': current_bill
-    })
+    # Search for item in inventory
+    with db.get_db() as conn:
+        cursor = conn.execute('SELECT item_name, price FROM inventory WHERE item_name LIKE ?', (f'%{item_name}%',))
+        items = cursor.fetchall()
+        
+        if items:
+            item = items[0]  # Take the first matching item
+            total = item[1] * quantity
+            current_bill['items'].append({
+                'name': item[0],
+                'quantity': quantity,
+                'price': item[1],
+                'total': total
+            })
+            current_bill['total'] = sum(item['total'] for item in current_bill['items'])
+            # Update the session with the modified bill
+            session['current_bill'] = current_bill
+            
+            return jsonify({
+                'response': f"Added {quantity} {item[0]} to the bill.",
+                'bill': current_bill
+            })
+        else:
+            return jsonify({
+                'response': f"Sorry, I couldn't find '{item_name}' in the inventory.",
+                'bill': current_bill
+            })
 
 @app.route('/inventory')
 def inventory():
