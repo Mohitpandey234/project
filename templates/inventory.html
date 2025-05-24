@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventory Management</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #343541;
+            color: white;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Table Styles */
+        .table-container {
+            background-color: #2A2B32;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #565869;
+        }
+
+        th {
+            background-color: #444654;
+            color: #ECECF1;
+        }
+
+        tr:hover {
+            background-color: #383942;
+        }
+
+        /* Chat Interface Styles */
+        .chat-interface {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #2A2B32;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 300px;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            max-width: 80%;
+        }
+
+        .user-message {
+            background-color: #444654;
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background-color: #383942;
+            margin-right: auto;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #565869;
+            border-radius: 5px;
+            background-color: #40414f;
+            color: white;
+            font-size: 14px;
+            resize: none;
+        }
+
+        .send-button {
+            padding: 12px 24px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .send-button:hover {
+            opacity: 0.9;
+        }
+
+        .helper-text {
+            color: #8e8ea0;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="table-container">
+            <h2>Current Inventory</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Price</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-table">
+                    {% for item in inventory %}
+                    <tr>
+                        <td>{{ item[0] }}</td>
+                        <td>${{ "%.2f"|format(item[1]) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="chat-interface">
+            <div class="helper-text">
+                Try these commands:
+                <br>• "add [item name] [price]" - Add a new item
+                <br>• "update price [item name] [new price]" - Update item price
+                <br>• "update name [old name] [new name]" - Update item name
+                <br>• "delete [item name]" - Delete an item
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="message bot-message">
+                    Hello! I can help you manage your inventory. What would you like to do?
+                </div>
+            </div>
+            <div class="input-container">
+                <textarea class="chat-input" placeholder="Type your command here..." rows="1"></textarea>
+                <button class="send-button">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.querySelector('.chat-input');
+        const sendButton = document.querySelector('.send-button');
+        const inventoryTable = document.getElementById('inventory-table');
+
+        function addMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.textContent = text;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function updateTable(inventory) {
+            inventoryTable.innerHTML = inventory.map(item => `
+                <tr>
+                    <td>${item[0]}</td>
+                    <td>$${item[1].toFixed(2)}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function handleCommand(command) {
+            try {
+                const response = await fetch('/inventory/command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ command })
+                });
+
+                const data = await response.json();
+                addMessage(data.message);
+                
+                if (data.inventory) {
+                    updateTable(data.inventory);
+                }
+            } catch (error) {
+                addMessage('Sorry, there was an error processing your command.');
+            }
+        }
+
+        function handleSend() {
+            const command = chatInput.value.trim();
+            if (command) {
+                addMessage(command, true);
+                handleCommand(command);
+                chatInput.value = '';
+            }
+        }
+
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+            }
+        });
+
+        sendButton.addEventListener('click', handleSend);
+    </script>
+</body>
+</html> 
